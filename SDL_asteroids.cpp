@@ -43,12 +43,17 @@ SDL_sem *stop_game_timer, *game_timer_stopped;
 typedef std::pair<int, int> position;
 typedef std::pair<double, double> velocity;
 enum class direction { LEFT, RIGHT};
-typedef std::pair<unsigned int, unsigned int> window_boundaries;
+typedef std::pair< int, int> window_boundaries;
 
 // typesafe constants
 const unsigned int TIMER_UPDATE = static_cast<int> (round(1000/60));
 const unsigned int GAME_UPDATE = static_cast<int> (1000);
-const unsigned int MAX_NUM_ASTEROIDS = static_cast<int> (1);
+const unsigned int MAX_NUM_ASTEROIDS = static_cast<int> (12);
+
+typedef  struct {
+   double x;
+   double y;
+}Double_dstrect;
 
 
 // the asteroid class for creating, updating and rendering an asteroid
@@ -68,6 +73,7 @@ private:
       .h = 90
    };
    SDL_Rect dstrect;
+   Double_dstrect d_dstrect;
    SDL_Surface *tmpsurf = 0;
    
 public:
@@ -88,8 +94,8 @@ asteroid::asteroid(window_boundaries bounds, position pos, velocity vel, double 
 {
    tmpsurf = SDL_LoadBMP( "asteroid_blue.bmp" );
 
-   dstrect.x = pos.first;
-   dstrect.y = pos.second;
+   d_dstrect.x = pos.first;
+   d_dstrect.y = pos.second;
    dstrect.w = 90;
    dstrect.h = 90;
 
@@ -106,20 +112,25 @@ asteroid::~asteroid()
 
 bool asteroid::update()
 {
-   dstrect.x += vel.first;
-   dstrect.y += vel.second;
+   d_dstrect.x += vel.first;
+   d_dstrect.y += vel.second;
+
+   dstrect.x = d_dstrect.x;
+   dstrect.y = d_dstrect.y;
    
-   std::cout << "position x: " << dstrect.x << " y: " << dstrect.y << std::endl;
-   std::cout << "neg srcrect x: " << (srcrect.w * -1) << " y: " << (srcrect.h * -1) << std::endl;
+   // std::cout << "position x: " << dstrect.x << " y: " << dstrect.y << std::endl;
+   // std::cout << "boundaries x: " << m_w_boundaries.first << " y: " << m_w_boundaries.second << std::endl;
+   // std::cout << "neg srcrect x: " << (srcrect.w * -1) << " y: " << (srcrect.h * -1) << std::endl;
 
    angle += (a_vel * rotation_dir);
 
    // // return true if the asteroid should be removed because it's moved off the screen
-    // if ((dstrect.x > m_w_boundaries.first) || (dstrect.y > m_w_boundaries.second) || 
-   if((dstrect.x < (srcrect.w * -1) || dstrect.y < (srcrect.h * -1)))
-       std::cout << "remove rock!" << std::endl;
-    
-   // else 
+   if ((dstrect.x > m_w_boundaries.first) || (dstrect.y > m_w_boundaries.second) || 
+      (dstrect.x < (srcrect.w * -1) || dstrect.y < (srcrect.h * -1)))
+   {
+      return true;
+   }
+   else 
       return false;
    
 }
@@ -170,16 +181,11 @@ void all_asteroids::spawn()
    
       std::cout << "speedx is: " << speedx << " and speedy is: " << speedy << std::endl;
   
-      // m_all_asteroids.insert(new asteroid(m_window_bounds, std::make_pair((rand() % m_window_bounds.first),(rand() % m_window_bounds.second)), 
-      //       std::make_pair(speedx, speedy), 
-      //       1.2, 
-      //       (rand() % 1) ? direction::RIGHT : direction::LEFT));
-
-      m_all_asteroids.insert(new asteroid(m_window_bounds, std::make_pair(0,0), 
-            std::make_pair(-1, 0), 
+      m_all_asteroids.insert(new asteroid(m_window_bounds, std::make_pair((rand() % m_window_bounds.first),(rand() % m_window_bounds.second)), 
+            std::make_pair(speedx, speedy), 
             1.2, 
             (rand() % 1) ? direction::RIGHT : direction::LEFT));
-      
+
    }
 }
 
