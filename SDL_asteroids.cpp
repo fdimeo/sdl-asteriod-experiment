@@ -32,6 +32,11 @@ _Bool running = true;
 SDL_Renderer* Main_Renderer;
 SDL_Texture* bkgd_texture;
 
+SDL_sem *stop_refresh_timer, *refresh_timer_stopped;
+SDL_sem *stop_game_timer, *game_timer_stopped;
+
+
+
 // typedefs of various necessary elements
 typedef std::pair<unsigned int, unsigned int> position;
 typedef std::pair<double, double> velocity;
@@ -39,6 +44,9 @@ enum class direction { LEFT, RIGHT};
 
 // typesafe constants
 const unsigned int TIMER_UPDATE = static_cast<int> (round(1000/60));
+const unsigned int GAME_UPDATE = static_cast<int> (1000);
+const unsigned int MAX_NUM_ASTEROIDS = static_cast<int> (12);
+
 
 // the asteroid class for creating, updating and rendering an asteroid
 class asteroid
@@ -60,6 +68,7 @@ private:
    
 public:
    asteroid(position pos, velocity vel, double a_vel, direction rotational_direction);
+   ~asteroid();
    void update();
    void render(SDL_Renderer *pRenderer);
 };
@@ -91,6 +100,11 @@ asteroid::asteroid(position pos, velocity vel, double a_vel, direction rotationa
    angle=0;
 }
 
+asteroid::~asteroid()
+{
+   SDL_DestroyTexture(pSprite_texture);
+}
+
 void asteroid::update()
 {
    dstrect.x += vel.first;
@@ -118,32 +132,79 @@ void asteroid::render(SDL_Renderer *pRenderer)
 std::unordered_set<asteroid *> all_asteroids;
 
 
+Uint32 update_game(Uint32 interval, void *param)
+{
+   // run the timer until the main thread signals up to stop
+   if(!SDL_SemValue(stop_game_timer)){
+      
+      if (all_asteroids.size() < MAX_NUM_ASTEROIDS)
+      {
+         all_asteroids.insert(new asteroid(std::make_pair(50,300), std::make_pair(1,-1), 2.4, direction::RIGHT));
+      }
+   }
+
+   else{
+      std::cout << "game timer stopped" << std::endl;
+
+      // we're done, destroy all the spawned asteroids
+      all_asteroids.clear();
+
+      // we've been requested to stop this timer...so tell the main thread that we have
+      SDL_SemPost(game_timer_stopped);
+   }
+
+   return interval;
+
+}
+
+
 Uint32 update_screen(Uint32 interval, void *param)
 {
-   SDL_RenderCopy(Main_Renderer, bkgd_texture, NULL, NULL);
-   
-   update_all_asteroids(all_asteroids);
+   // run the timer until the main thread signals up to stop
+   if(!SDL_SemValue(stop_refresh_timer)){
 
-   SDL_RenderPresent(Main_Renderer);
+      SDL_RenderCopy(Main_Renderer, bkgd_texture, NULL, NULL);
+   
+      update_all_asteroids(all_asteroids);
+
+      SDL_RenderPresent(Main_Renderer);
+   }
+   else{
+      std::cout << "refresh timer stopped" << std::endl;
+      // we've been requested to stop this timer...so tell the main thread that we have
+      SDL_SemPost(refresh_timer_stopped);
+   }
 
    return interval;
 }
 
+
+
+
 int main( int argc, char* args[] )
 {
- if( SDL_Init( SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER | SDL_INIT_EVENTS) < 0 )
- {
-   printf( "SDL2 could not initialize! SDL2_Error: %s\n", SDL_GetError() );
- }
- else
- {
-   window = SDL_CreateWindow(
-       WINDOW_TITLE,
-       SDL_WINDOWPOS_CENTERED,
-       SDL_WINDOWPOS_CENTERED,
-       WINDOW_WIDTH,
-       WINDOW_HEIGHT,
-       SDL_WINDOW_SHOWN);
+   SDL_TimerID refresh_timer, game_timer;
+   
+   stop_refresh_timer = SDL_CreateSemaphore(0);
+   refresh_timer_stopped = SDL_CreateSemaphore(0);
+
+   stop_game_timer = SDL_CreateSemaphore(0);
+   game_timer_stopped = SDL_CreateSemaphore(0);
+
+
+   if( SDL_Init( SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER | SDL_INIT_EVENTS) < 0 )
+   {
+      printf( "SDL2 could not initialize! SDL2_Error: %s\n", SDL_GetError() );
+   }
+   else
+   {
+      window = SDL_CreateWindow(
+         WINDOW_TITLE,
+         SDL_WINDOWPOS_CENTERED,
+         SDL_WINDOWPOS_CENTERED,
+         WINDOW_WIDTH,
+         WINDOW_HEIGHT,
+         SDL_WINDOW_SHOWN);
 
    std::cout << "updating screen every " << TIMER_UPDATE << " mS" << std::endl;
    
@@ -153,17 +214,11 @@ int main( int argc, char* args[] )
    bkgd_texture = SDL_CreateTextureFromSurface(Main_Renderer, tmpsurf);
    SDL_FreeSurface(tmpsurf);
 
-   asteroid *pA = new asteroid(std::make_pair(100,200), std::make_pair(1,1), 4.4, direction::LEFT);
-   all_asteroids.insert(pA);
+   // start our frame update timer
+   refresh_timer = SDL_AddTimer(TIMER_UPDATE, update_screen, NULL);
 
-   asteroid *pA1 = new asteroid(std::make_pair(50,300), std::make_pair(1,-1), 7.4, direction::RIGHT);
-   all_asteroids.insert(pA1);
- 
-   asteroid *pA2 = new asteroid(std::make_pair(300,100), std::make_pair(-1,1), 14.4, direction::LEFT);
-   all_asteroids.insert(pA2);
-
-  // start our frame update timer
-   SDL_AddTimer(TIMER_UPDATE, update_screen, NULL);
+   // start our game timer
+   game_timer = SDL_AddTimer(GAME_UPDATE, update_game, NULL);
 
 
    // get the audio drivers available
@@ -194,6 +249,22 @@ int main( int argc, char* args[] )
 
   }
  }
+
+ // clean up 
+ // signal the timer threads to stop running so we can get rid of it
+ SDL_SemPost(stop_refresh_timer);
+ SDL_SemPost(stop_game_timer);
+
+ // wait until the timer threads have finished the last iteration
+ SDL_SemWait(refresh_timer_stopped);
+ SDL_SemWait(game_timer_stopped);
+
+ // remove the timers
+ SDL_RemoveTimer(refresh_timer);
+ SDL_RemoveTimer(game_timer);
+
+ SDL_DestroyTexture(bkgd_texture);
+ SDL_DestroyRenderer(Main_Renderer);
  SDL_DestroyWindow( window );
  SDL_Quit();
  return 0;
