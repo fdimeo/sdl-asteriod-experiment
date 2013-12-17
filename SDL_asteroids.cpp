@@ -40,7 +40,7 @@ SDL_sem *stop_game_timer, *game_timer_stopped;
 
 
 // typedefs of various necessary elements
-typedef std::pair<unsigned int, unsigned int> position;
+typedef std::pair<int, int> position;
 typedef std::pair<double, double> velocity;
 enum class direction { LEFT, RIGHT};
 
@@ -148,10 +148,14 @@ void all_asteroids::spawn()
    if (m_all_asteroids.size() < MAX_NUM_ASTEROIDS)
    {
       srand (time(NULL));
-      
+
+      double speedx = ((rand() % 9)+1)/4.0;
+      double speedy = ((rand() % 9)+1)/4.0;
+   
+      std::cout << "speedx is: " << speedx << " and speedy is: " << speedy << std::endl;
   
       m_all_asteroids.insert(new asteroid(std::make_pair((rand() % m_window_boundaries.first),(rand() % m_window_boundaries.second)), 
-            std::make_pair(((rand() % 9)+1)/5.0,((rand() % 9)+1)/5.0), 
+            std::make_pair(speedx, speedy), 
             1.2, 
             (rand() % 1) ? direction::RIGHT : direction::LEFT));
    }
@@ -167,7 +171,7 @@ void all_asteroids::update()
    for (auto it : m_all_asteroids){
       it->update();
       pos = it->getPosition();
-      if ((pos.first > m_window_boundaries.first) || (pos.second > m_window_boundaries.second)){
+      if ((pos.first > m_window_boundaries.first) || (pos.second > m_window_boundaries.second) || (pos.first < 0) || (pos.second < 0) ){
          tmp_set.insert(it);
       }
       else{
@@ -177,6 +181,7 @@ void all_asteroids::update()
 
    // remove any asteroids that have gone out of scope
    for( auto it : tmp_set){
+      std::cout << "erasing asteroid" << std::endl;
       m_all_asteroids.erase(it);
    }
 }
