@@ -5,6 +5,8 @@ http://nothingtocode.blogspot.com
 */
 
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
+
 #include <cstdbool>
 #include <cstdlib>
 #include <iostream>
@@ -92,7 +94,7 @@ double operator *(double d, direction dir)
 
 asteroid::asteroid(window_boundaries bounds, position pos, velocity vel, double a_vel, direction rotational_direction):m_w_boundaries(bounds),a_vel(a_vel),vel(vel),rotation_dir(rotational_direction)
 {
-   tmpsurf = SDL_LoadBMP( "asteroid_blue.bmp" );
+   tmpsurf = IMG_Load( "asteroid.png" );;
 
    d_dstrect.x = pos.first;
    d_dstrect.y = pos.second;
