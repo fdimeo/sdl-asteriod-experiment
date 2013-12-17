@@ -43,6 +43,7 @@ SDL_sem *stop_game_timer, *game_timer_stopped;
 typedef std::pair<int, int> position;
 typedef std::pair<double, double> velocity;
 enum class direction { LEFT, RIGHT};
+typedef std::pair<unsigned int, unsigned int> window_boundaries;
 
 // typesafe constants
 const unsigned int TIMER_UPDATE = static_cast<int> (round(1000/60));
@@ -54,6 +55,7 @@ const unsigned int MAX_NUM_ASTEROIDS = static_cast<int> (12);
 class asteroid
 {
 private:
+   window_boundaries m_w_boundaries;  // the boundaries for the asteroid
    SDL_Texture *pSprite_texture;
    double a_vel;
    velocity vel;
@@ -69,9 +71,9 @@ private:
    SDL_Surface *tmpsurf = 0;
    
 public:
-   asteroid(position pos, velocity vel, double a_vel, direction rotational_direction);
+   asteroid(window_boundaries bounds, position pos, velocity vel, double a_vel, direction rotational_direction);
    ~asteroid();
-   void update();
+   bool update();  // return true when the asteroid goes out of the window
    position getPosition();
    void render(SDL_Renderer *pRenderer);
 };
@@ -82,7 +84,7 @@ double operator *(double d, direction dir)
    return (d * (dir == direction::LEFT ? -1.0 : 1.0));
 }
 
-asteroid::asteroid(position pos, velocity vel, double a_vel, direction rotational_direction):a_vel(a_vel),vel(vel),rotation_dir(rotational_direction)
+asteroid::asteroid(window_boundaries bounds, position pos, velocity vel, double a_vel, direction rotational_direction):m_w_boundaries(bounds),a_vel(a_vel),vel(vel),rotation_dir(rotational_direction)
 {
    tmpsurf = SDL_LoadBMP( "asteroid_blue.bmp" );
 
@@ -100,12 +102,17 @@ asteroid::~asteroid()
    SDL_DestroyTexture(pSprite_texture);
 }
 
-void asteroid::update()
+bool asteroid::update()
 {
    dstrect.x += vel.first;
    dstrect.y += vel.second;
    
    angle += (a_vel * rotation_dir);
+
+   if ((dstrect.x > m_w_boundaries.first) || (dstrect.x > m_w_boundaries.second) || !(dstrect.x > dstrect.w ) || !(dstrect.y > dstrect.h) ){
+      return true;
+   }
+   else return false;
    
 }
 
@@ -130,16 +137,16 @@ position asteroid::getPosition()
 class all_asteroids {
 private:
    std::unordered_set<asteroid *> m_all_asteroids;  // a set of all the asteroids alive in the game
-   std::pair<unsigned int, unsigned int> m_window_boundaries;  // the boundaries for the asteroids
-
+   window_boundaries m_window_bounds; 
+ 
 public:
-   all_asteroids(std::pair<unsigned int, unsigned int> window_boundaries);
+   all_asteroids( window_boundaries bounds);
    void spawn();
    void update();     
    ~all_asteroids();  // delete all asteroids created on the heap
 };
 
-all_asteroids::all_asteroids(std::pair<unsigned int, unsigned int> window_boundaries):m_window_boundaries(window_boundaries)
+all_asteroids::all_asteroids(window_boundaries bounds):m_window_bounds(bounds)
 {
 }
 
@@ -154,7 +161,7 @@ void all_asteroids::spawn()
    
       std::cout << "speedx is: " << speedx << " and speedy is: " << speedy << std::endl;
   
-      m_all_asteroids.insert(new asteroid(std::make_pair((rand() % m_window_boundaries.first),(rand() % m_window_boundaries.second)), 
+      m_all_asteroids.insert(new asteroid(m_window_bounds, std::make_pair((rand() % m_window_bounds.first),(rand() % m_window_bounds.second)), 
             std::make_pair(speedx, speedy), 
             1.2, 
             (rand() % 1) ? direction::RIGHT : direction::LEFT));
@@ -169,9 +176,9 @@ void all_asteroids::update()
    
 
    for (auto it : m_all_asteroids){
-      it->update();
-      pos = it->getPosition();
-      if ((pos.first > m_window_boundaries.first) || (pos.second > m_window_boundaries.second) || !(pos.first > 0) || !(pos.second > 0) ){
+      
+      // update the asteroid.  If the update returns true, then the asteroid is out of bounds and must be removed
+      if (it->update()){
          tmp_set.insert(it);
       }
       else{
