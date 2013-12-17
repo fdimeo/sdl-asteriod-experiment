@@ -150,7 +150,7 @@ void all_asteroids::spawn()
       srand (time(NULL));
 
       double speedx = ((rand() % 9)+1)/4.0;
-      double speedy = ((rand() % 9)+1)/4.0;
+      double speedy = -1.0 * ((rand() % 9)+1)/4.0;
    
       std::cout << "speedx is: " << speedx << " and speedy is: " << speedy << std::endl;
   
@@ -171,7 +171,7 @@ void all_asteroids::update()
    for (auto it : m_all_asteroids){
       it->update();
       pos = it->getPosition();
-      if ((pos.first > m_window_boundaries.first) || (pos.second > m_window_boundaries.second) || (pos.first < 0) || (pos.second < 0) ){
+      if ((pos.first > m_window_boundaries.first) || (pos.second > m_window_boundaries.second) || !(pos.first > 0) || !(pos.second > 0) ){
          tmp_set.insert(it);
       }
       else{
