@@ -48,7 +48,7 @@ typedef std::pair<unsigned int, unsigned int> window_boundaries;
 // typesafe constants
 const unsigned int TIMER_UPDATE = static_cast<int> (round(1000/60));
 const unsigned int GAME_UPDATE = static_cast<int> (1000);
-const unsigned int MAX_NUM_ASTEROIDS = static_cast<int> (12);
+const unsigned int MAX_NUM_ASTEROIDS = static_cast<int> (1);
 
 
 // the asteroid class for creating, updating and rendering an asteroid
@@ -92,6 +92,8 @@ asteroid::asteroid(window_boundaries bounds, position pos, velocity vel, double 
    dstrect.y = pos.second;
    dstrect.w = 90;
    dstrect.h = 90;
+
+   std::cout << "window bounds in asteroid are " << m_w_boundaries.first << " by " << m_w_boundaries.second << std::endl;
    
    // the initial angle is zero
    angle=0;
@@ -107,12 +109,18 @@ bool asteroid::update()
    dstrect.x += vel.first;
    dstrect.y += vel.second;
    
+   std::cout << "position x: " << dstrect.x << " y: " << dstrect.y << std::endl;
+   std::cout << "neg srcrect x: " << (srcrect.w * -1) << " y: " << (srcrect.h * -1) << std::endl;
+
    angle += (a_vel * rotation_dir);
 
-   if ((dstrect.x > m_w_boundaries.first) || (dstrect.x > m_w_boundaries.second) || !(dstrect.x > dstrect.w ) || !(dstrect.y > dstrect.h) ){
-      return true;
-   }
-   else return false;
+   // // return true if the asteroid should be removed because it's moved off the screen
+    // if ((dstrect.x > m_w_boundaries.first) || (dstrect.y > m_w_boundaries.second) || 
+   if((dstrect.x < (srcrect.w * -1) || dstrect.y < (srcrect.h * -1)))
+       std::cout << "remove rock!" << std::endl;
+    
+   // else 
+      return false;
    
 }
 
@@ -148,6 +156,7 @@ public:
 
 all_asteroids::all_asteroids(window_boundaries bounds):m_window_bounds(bounds)
 {
+   std::cout << "window size is " << m_window_bounds.first << " by " << m_window_bounds.second << std::endl;
 }
 
 void all_asteroids::spawn()
@@ -161,10 +170,16 @@ void all_asteroids::spawn()
    
       std::cout << "speedx is: " << speedx << " and speedy is: " << speedy << std::endl;
   
-      m_all_asteroids.insert(new asteroid(m_window_bounds, std::make_pair((rand() % m_window_bounds.first),(rand() % m_window_bounds.second)), 
-            std::make_pair(speedx, speedy), 
+      // m_all_asteroids.insert(new asteroid(m_window_bounds, std::make_pair((rand() % m_window_bounds.first),(rand() % m_window_bounds.second)), 
+      //       std::make_pair(speedx, speedy), 
+      //       1.2, 
+      //       (rand() % 1) ? direction::RIGHT : direction::LEFT));
+
+      m_all_asteroids.insert(new asteroid(m_window_bounds, std::make_pair(0,0), 
+            std::make_pair(-1, 0), 
             1.2, 
             (rand() % 1) ? direction::RIGHT : direction::LEFT));
+      
    }
 }
 
