@@ -18,15 +18,11 @@ http://nothingtocode.blogspot.com
 #define WINDOW_HEIGHT 480
 
 /* Window title */
-#define WINDOW_TITLE "SDL2 Test"
+#define WINDOW_TITLE "Just some random asteroids..."
 
 /* The window */
 SDL_Window* window = NULL;
 	
-/* The window surface */
-SDL_Surface* screen = NULL;
-
-
 /* The event structure */
 SDL_Event event;
 
@@ -120,10 +116,6 @@ bool asteroid::update()
    dstrect.x = d_dstrect.x;
    dstrect.y = d_dstrect.y;
    
-   // std::cout << "position x: " << dstrect.x << " y: " << dstrect.y << std::endl;
-   // std::cout << "boundaries x: " << m_w_boundaries.first << " y: " << m_w_boundaries.second << std::endl;
-   // std::cout << "neg srcrect x: " << (srcrect.w * -1) << " y: " << (srcrect.h * -1) << std::endl;
-
    angle += (a_vel * rotation_dir);
 
    // // return true if the asteroid should be removed because it's moved off the screen
@@ -185,8 +177,8 @@ void all_asteroids::spawn()
   
       m_all_asteroids.insert(new asteroid(m_window_bounds, std::make_pair((rand() % m_window_bounds.first),(rand() % m_window_bounds.second)), 
             std::make_pair(speedx, speedy), 
-            1.2, 
-            (rand() % 1) ? direction::RIGHT : direction::LEFT));
+            ((rand() % 10)+5)/2.0, 
+            (rand() % 2) ? direction::RIGHT : direction::LEFT));
 
    }
 }
@@ -296,7 +288,8 @@ int main( int argc, char* args[] )
          SDL_WINDOWPOS_CENTERED,
          WINDOW_WIDTH,
          WINDOW_HEIGHT,
-         SDL_WINDOW_SHOWN);
+         SDL_WINDOW_SHOWN  );
+
 
       // create the game asteroids instance, and tell it where the window boundaries are
       all_asteroids game_asteroids(std::make_pair(WINDOW_WIDTH, WINDOW_HEIGHT));
@@ -314,7 +307,6 @@ int main( int argc, char* args[] )
 
       // start our game timer and pass the asteroids instance
       game_timer = SDL_AddTimer(GAME_UPDATE, update_game, &game_asteroids);
-
 
       // get the audio drivers available
       std::cout << "number of audio drivers available: " << SDL_GetNumAudioDrivers() << std::endl;
